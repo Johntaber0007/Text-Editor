@@ -541,7 +541,7 @@ class TextComparisonApp(QMainWindow):
 
     def save_project(self):
         project_path, _ = QFileDialog.getSaveFileName(
-            self, "Save Project", "", "Text Comparison Project Files (*.tcproj)"
+            self, "Save Project", "", "Project Files (*.project)"
         )
         if project_path:
             project_data = {
@@ -552,7 +552,7 @@ class TextComparisonApp(QMainWindow):
 
     def load_project(self):
         project_path, _ = QFileDialog.getOpenFileName(
-            self, "Load Project", "", "Text Comparison Project Files (*.tcproj)"
+            self, "Load Project", "", "Project Files (*.project)"
         )
         if project_path:
             with open(project_path, "r", encoding="utf-8") as f:
