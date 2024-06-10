@@ -9,16 +9,16 @@ from PySide6.QtWidgets import (
     QRadioButton, QButtonGroup, QMessageBox, QTabWidget, QComboBox, QToolBar, QDialog, QTabBar
 )
 from PySide6.QtCore import Qt, QTimer, QDateTime
-from PySide6.QtGui import QFont, QTextCursor, QTextDocument, QIcon, QAction, QPixmap
+from PySide6.QtGui import QFont, QTextCursor, QTextDocument, QIcon, QAction, QTextCharFormat
 import chardet
 import pythainlp
 from pythainlp.tokenize import word_tokenize
-import base64
 
 class FindReplaceDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent = parent
+        self.target_tab = self.parent.tabs.currentWidget()
         self.setWindowTitle("Find & Replace")
 
         find_label = QLabel("Find:")
@@ -85,6 +85,11 @@ class FindReplaceDialog(QDialog):
         self.setLayout(layout)
 
     def find(self):
+        current_tab = self.parent.tabs.currentWidget()
+
+        if current_tab is None:
+            return
+
         text_to_find = self.find_edit.text()
         if not text_to_find:
             return
@@ -106,7 +111,7 @@ class FindReplaceDialog(QDialog):
             pattern = text_to_find
             flags = 0
 
-        cursor = self.parent.target_text_area.textCursor()
+        cursor = current_tab.target_text_area.textCursor()
         if not cursor.hasSelection():
             if search_forward:
                 cursor.movePosition(QTextCursor.Start)
@@ -114,7 +119,7 @@ class FindReplaceDialog(QDialog):
                 cursor.movePosition(QTextCursor.End)
 
         if self.regex_radio.isChecked():
-            found_cursor = self.parent.target_text_area.document().find(pattern, cursor)
+            found_cursor = current_tab.target_text_area.document().find(pattern, cursor)
         else:
             find_flags = QTextDocument.FindFlags(0)
             if not search_forward:
@@ -122,28 +127,32 @@ class FindReplaceDialog(QDialog):
             if match_case:
                 find_flags |= QTextDocument.FindCaseSensitively
 
-            found_cursor = self.parent.target_text_area.document().find(
+            found_cursor = current_tab.target_text_area.document().find(
                 pattern, cursor, find_flags
             )
 
         if found_cursor.isNull() and wrap_around:
             if search_forward:
-                found_cursor = self.parent.target_text_area.document().find(
-                    pattern, QTextCursor(self.parent.target_text_area.document())
+                found_cursor = current_tab.target_text_area.document().find(
+                    pattern, QTextCursor(current_tab.target_text_area.document())
                 )
             else:
-                found_cursor = self.parent.target_text_area.document().find(
+                found_cursor = current_tab.target_text_area.document().find(
                     pattern,
-                    QTextCursor(self.parent.target_text_area.document()),
+                    QTextCursor(current_tab.target_text_area.document()),
                     QTextDocument.FindBackward,
                 )
 
         if not found_cursor.isNull():
-            self.parent.target_text_area.setTextCursor(found_cursor)
+            current_tab.target_text_area.setTextCursor(found_cursor)
         else:
             QMessageBox.information(self, "Find", f"ไม่พบข้อความ '{text_to_find}'")
 
     def replace(self):
+        current_tab = self.parent.tabs.currentWidget()
+        if current_tab is None:
+            return
+
         text_to_find = self.find_edit.text()
         text_to_replace = self.replace_edit.text()
         if not text_to_find:
@@ -166,7 +175,7 @@ class FindReplaceDialog(QDialog):
             pattern = text_to_find
             flags = 0
 
-        cursor = self.parent.target_text_area.textCursor()
+        cursor = current_tab.target_text_area.textCursor()
 
         if not cursor.hasSelection():
             if search_forward:
@@ -178,49 +187,73 @@ class FindReplaceDialog(QDialog):
             cursor.removeSelectedText()
             cursor.insertText(text_to_replace)
 
-        found_cursor = self.parent.target_text_area.document().find(pattern, cursor) 
+        found_cursor = current_tab.target_text_area.document().find(pattern, cursor) 
         if found_cursor.isNull() and wrap_around:
             if search_forward:
-                found_cursor = self.parent.target_text_area.document().find(
-                    pattern, QTextCursor(self.parent.target_text_area.document())
+                found_cursor = current_tab.target_text_area.document().find(
+                    pattern, QTextCursor(current_tab.target_text_area.document())
                 )
             else:
-                found_cursor = self.parent.target_text_area.document().find(
+                found_cursor = current_tab.target_text_area.document().find(
                     pattern,
-                    QTextCursor(self.parent.target_text_area.document()),
+                    QTextCursor(current_tab.target_text_area.document()),
                     QTextDocument.FindBackward,
                 )
 
         if not found_cursor.isNull():
-            self.parent.target_text_area.setTextCursor(found_cursor)
+            current_tab.target_text_area.setTextCursor(found_cursor)
 
     def replace_all(self):
+        current_tab = self.parent.tabs.currentWidget()
+        if current_tab is None:
+            return
+
         text_to_find = self.find_edit.text()
         text_to_replace = self.replace_edit.text()
         if not text_to_find:
             return
 
         match_case = self.match_case_checkbox.isChecked()
-        whole_words = self.normal_radio.isChecked()
 
-        flags = 0
-        if not match_case:
-            flags |= re.IGNORECASE
+        document = current_tab.target_text_area.document()
+        cursor = current_tab.target_text_area.textCursor()
+        cursor.beginEditBlock()
 
-        original_text = self.parent.target_text_area.toPlainText()
+        replacements = 0
 
-        if whole_words:
-            pattern = re.compile(rf"\b{re.escape(text_to_find)}\b", flags=flags)
-        else:
-            pattern = re.compile(re.escape(text_to_find), flags=flags)
+        while True:
+            find_flags = QTextDocument.FindFlags(0)
+            if match_case:
+                find_flags |= QTextDocument.FindCaseSensitively
 
-        new_text, replacements = re.subn(pattern, text_to_replace, original_text)
+            if self.regex_radio.isChecked():
+                pattern = re.compile(text_to_find)
+                found_cursor = document.find(pattern, cursor)
+            elif self.extended_radio.isChecked():
+                text_to_find = bytes(text_to_find, "utf-8").decode("unicode_escape")
+                found_cursor = document.find(text_to_find, cursor, find_flags)
+            else:
+                found_cursor = document.find(text_to_find, cursor, find_flags)
+
+            if found_cursor.isNull():
+                break
+
+            found_cursor.beginEditBlock()  
+            found_cursor.removeSelectedText()
+            found_cursor.insertText(text_to_replace)
+            found_cursor.endEditBlock() 
+
+            replacements += 1
+            cursor = found_cursor
+
+        cursor.endEditBlock()
 
         if replacements > 0:
-            self.parent.target_text_area.setPlainText(new_text)
-            QMessageBox.information(self, "Replace All", f"แทนที่ข้อความ '{text_to_find}' ทั้งหมด {replacements} ครั้ง")
+            QMessageBox.information(
+                self, "Replace All", f"Replaced '{text_to_find}' with '{text_to_replace}' {replacements} times"
+            )
         else:
-            QMessageBox.information(self, "Replace All", f"ไม่พบข้อความ '{text_to_find}'")
+            QMessageBox.information(self, "Replace All", f"Not found: '{text_to_find}'")
 
 class TextComparisonTab(QWidget):
     def __init__(self, parent=None):
@@ -519,14 +552,6 @@ class TextComparisonApp(QMainWindow):
         load_project_action.triggered.connect(self.load_project)
         file_menu.addAction(load_project_action)
 
-        self.setWindowIcon(self.create_icon_from_base64(
-            "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"
-        ))
-
-    def create_icon_from_base64(self, base64_string):
-        pixmap = QPixmap()
-        pixmap.loadFromData(base64.b64decode(base64_string))
-        return QIcon(pixmap)
 
     def save_project(self):
         project_path, _ = QFileDialog.getSaveFileName(
@@ -581,10 +606,27 @@ class TextComparisonApp(QMainWindow):
             self.tabs.removeTab(current_tab_index)
 
     def open_find_replace_dialog(self):
+        current_tab_index = self.tabs.currentIndex()
+        if current_tab_index == -1:
+            return
+
+        self.find_replace_dialog = FindReplaceDialog(self)
+        self.find_replace_dialog.show()
+
+    def highlight_all_matches(self, text_to_find):
+        pass
+
+    def find_in_current_tab(self):
         current_tab = self.tabs.currentWidget()
         if current_tab:
-            dialog = FindReplaceDialog(current_tab)
-            dialog.show()
+            self.find_replace_dialog.target_text_area = current_tab.target_text_area
+            self.find_replace_dialog.find()
+
+    def find_in_next_tab(self):
+        current_index = self.tabs.currentIndex()
+        next_index = (current_index + 1) % self.tabs.count()
+        self.tabs.setCurrentIndex(next_index)
+        self.find_in_current_tab()
 
     def undo(self):
         current_tab = self.tabs.currentWidget()
