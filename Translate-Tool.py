@@ -86,7 +86,6 @@ class FindReplaceDialog(QDialog):
 
     def find(self):
         current_tab = self.parent.tabs.currentWidget()
-
         if current_tab is None:
             return
 
@@ -98,19 +97,6 @@ class FindReplaceDialog(QDialog):
         wrap_around = self.wrap_around_checkbox.isChecked()
         search_forward = self.forward_radio.isChecked()
 
-        if self.regex_radio.isChecked():
-            pattern = re.compile(text_to_find)
-            flags = 0
-            if match_case:
-                flags |= re.IGNORECASE
-        elif self.extended_radio.isChecked():
-            text_to_find = re.escape(text_to_find)
-            pattern = text_to_find
-            flags = 0
-        else:
-            pattern = text_to_find
-            flags = 0
-
         cursor = current_tab.target_text_area.textCursor()
         if not cursor.hasSelection():
             if search_forward:
@@ -118,29 +104,33 @@ class FindReplaceDialog(QDialog):
             else:
                 cursor.movePosition(QTextCursor.End)
 
+        find_flags = QTextDocument.FindFlags(0)
+        if not search_forward:
+            find_flags |= QTextDocument.FindBackward
+
         if self.regex_radio.isChecked():
-            found_cursor = current_tab.target_text_area.document().find(pattern, cursor)
-        else:
-            find_flags = QTextDocument.FindFlags(0)
-            if not search_forward:
-                find_flags |= QTextDocument.FindBackward
+            pattern = QRegularExpression(text_to_find)
             if match_case:
+                pattern.setPatternOptions(QRegularExpression.CaseInsensitiveOption)
+        else:
+            pattern = text_to_find
+            if match_case and self.normal_radio.isChecked():
+                find_flags |= QTextDocument.FindCaseSensitively | QTextDocument.FindWholeWords 
+            elif match_case:
                 find_flags |= QTextDocument.FindCaseSensitively
 
-            found_cursor = current_tab.target_text_area.document().find(
-                pattern, cursor, find_flags
-            )
+        found_cursor = current_tab.target_text_area.document().find(pattern, cursor, find_flags)
 
         if found_cursor.isNull() and wrap_around:
             if search_forward:
                 found_cursor = current_tab.target_text_area.document().find(
-                    pattern, QTextCursor(current_tab.target_text_area.document())
+                    pattern, QTextCursor(current_tab.target_text_area.document()), find_flags
                 )
             else:
                 found_cursor = current_tab.target_text_area.document().find(
                     pattern,
                     QTextCursor(current_tab.target_text_area.document()),
-                    QTextDocument.FindBackward,
+                    find_flags | QTextDocument.FindBackward,
                 )
 
         if not found_cursor.isNull():
@@ -162,42 +152,38 @@ class FindReplaceDialog(QDialog):
         wrap_around = self.wrap_around_checkbox.isChecked()
         search_forward = self.forward_radio.isChecked()
 
-        if self.regex_radio.isChecked():
-            pattern = re.compile(text_to_find)
-            flags = 0
-            if match_case:
-                flags |= re.IGNORECASE
-        elif self.extended_radio.isChecked():
-            text_to_find = re.escape(text_to_find)
-            pattern = text_to_find
-            flags = 0
-        else:
-            pattern = text_to_find
-            flags = 0
-
         cursor = current_tab.target_text_area.textCursor()
 
-        if not cursor.hasSelection():
-            if search_forward:
-                cursor.movePosition(QTextCursor.Start)
-            else:
-                cursor.movePosition(QTextCursor.End)
+        if self.regex_radio.isChecked():
+            pattern = QRegularExpression(text_to_find)
+            if match_case:
+                pattern.setPatternOptions(QRegularExpression.CaseInsensitiveOption)
+            find_flags = QTextDocument.FindFlags(0)
+        else:
+            pattern = text_to_find
+            find_flags = QTextDocument.FindFlags(0)
+            if not search_forward:
+                find_flags |= QTextDocument.FindBackward
+            if match_case and self.normal_radio.isChecked():
+                find_flags |= QTextDocument.FindCaseSensitively | QTextDocument.FindWholeWords 
+            elif match_case:
+                find_flags |= QTextDocument.FindCaseSensitively
 
-        if cursor.hasSelection() and cursor.selectedText() == text_to_find:
+        if cursor.hasSelection() and (self.regex_radio.isChecked() or cursor.selectedText() == text_to_find):
             cursor.removeSelectedText()
             cursor.insertText(text_to_replace)
 
-        found_cursor = current_tab.target_text_area.document().find(pattern, cursor) 
+        found_cursor = current_tab.target_text_area.document().find(pattern, cursor, find_flags)
         if found_cursor.isNull() and wrap_around:
             if search_forward:
                 found_cursor = current_tab.target_text_area.document().find(
-                    pattern, QTextCursor(current_tab.target_text_area.document())
+                    pattern, QTextCursor(current_tab.target_text_area.document()), find_flags
                 )
             else:
                 found_cursor = current_tab.target_text_area.document().find(
                     pattern,
                     QTextCursor(current_tab.target_text_area.document()),
-                    QTextDocument.FindBackward,
+                    find_flags | QTextDocument.FindBackward,
                 )
 
         if not found_cursor.isNull():
@@ -214,35 +200,35 @@ class FindReplaceDialog(QDialog):
             return
 
         match_case = self.match_case_checkbox.isChecked()
-
         document = current_tab.target_text_area.document()
-        cursor = current_tab.target_text_area.textCursor()
-        cursor.beginEditBlock()
+        cursor = QTextCursor(document)
+
+        if self.regex_radio.isChecked():
+            pattern = QRegularExpression(text_to_find)
+            if match_case:
+                pattern.setPatternOptions(QRegularExpression.CaseInsensitiveOption)
+        else:
+            if match_case and self.normal_radio.isChecked():
+                pattern = text_to_find
+                find_flags = QTextDocument.FindFlags(QTextDocument.FindWholeWords) | QTextDocument.FindCaseSensitively
+            elif match_case:
+                pattern = text_to_find
+                find_flags = QTextDocument.FindFlags(QTextDocument.FindCaseSensitively)
+            else:
+                pattern = text_to_find.lower()
+                find_flags = QTextDocument.FindFlags(0)
 
         replacements = 0
-
+        cursor.beginEditBlock()
         while True:
-            find_flags = QTextDocument.FindFlags(0)
-            if match_case:
-                find_flags |= QTextDocument.FindCaseSensitively
-
             if self.regex_radio.isChecked():
-                pattern = re.compile(text_to_find)
                 found_cursor = document.find(pattern, cursor)
-            elif self.extended_radio.isChecked():
-                text_to_find = bytes(text_to_find, "utf-8").decode("unicode_escape")
-                found_cursor = document.find(text_to_find, cursor, find_flags)
             else:
-                found_cursor = document.find(text_to_find, cursor, find_flags)
-
+                found_cursor = document.find(pattern, cursor, find_flags)
             if found_cursor.isNull():
                 break
-
-            found_cursor.beginEditBlock()  
             found_cursor.removeSelectedText()
             found_cursor.insertText(text_to_replace)
-            found_cursor.endEditBlock() 
-
             replacements += 1
             cursor = found_cursor
 
