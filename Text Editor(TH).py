@@ -19,27 +19,27 @@ class FindReplaceDialog(QDialog):
         super().__init__(parent)
         self.parent = parent
         self.target_tab = self.parent.tabs.currentWidget()
-        self.setWindowTitle("Find & Replace")
+        self.setWindowTitle("ค้นหา & แทนที่")
 
-        find_label = QLabel("Find:")
+        find_label = QLabel("ค้นหา:")
         self.find_edit = QLineEdit()
 
-        replace_label = QLabel("Replace with:")
+        replace_label = QLabel("แทนที่ด้วย:")
         self.replace_edit = QLineEdit()
 
         self.direction_group = QButtonGroup()
-        self.forward_radio = QRadioButton("Forward")
+        self.forward_radio = QRadioButton("ไปข้างหน้า")
         self.forward_radio.setChecked(True)
-        self.backward_radio = QRadioButton("Backward")
+        self.backward_radio = QRadioButton("ย้อนกลับ")
         self.direction_group.addButton(self.forward_radio)
         self.direction_group.addButton(self.backward_radio)
 
-        self.match_case_checkbox = QCheckBox("Match case")
+        self.match_case_checkbox = QCheckBox("ตรงกับทั้งคำเท่านั้น")
         self.wrap_around_checkbox = QCheckBox("Wrap around")
         self.wrap_around_checkbox.setChecked(True)
 
         self.search_mode_group = QButtonGroup()
-        self.normal_radio = QRadioButton("Normal")
+        self.normal_radio = QRadioButton("ธรรมดา")
         self.normal_radio.setChecked(True)
         self.extended_radio = QRadioButton("Extended (\\n, \\r, \\t, \\0, \\x...)")
         self.regex_radio = QRadioButton("Regular expression")
@@ -47,13 +47,13 @@ class FindReplaceDialog(QDialog):
         self.search_mode_group.addButton(self.extended_radio)
         self.search_mode_group.addButton(self.regex_radio)
 
-        find_button = QPushButton("Find Next")
+        find_button = QPushButton("ค้นหาถัดไป")
         find_button.clicked.connect(self.find)
-        replace_button = QPushButton("Replace")
+        replace_button = QPushButton("แทนที่")
         replace_button.clicked.connect(self.replace)
-        replace_all_button = QPushButton("Replace All")
+        replace_all_button = QPushButton("แทนที่ทั้งหมด")
         replace_all_button.clicked.connect(self.replace_all)
-        close_button = QPushButton("Close")
+        close_button = QPushButton("ปิด")
         close_button.clicked.connect(self.close)
 
         layout = QVBoxLayout()
@@ -70,7 +70,7 @@ class FindReplaceDialog(QDialog):
         layout.addWidget(self.match_case_checkbox)
         layout.addWidget(self.wrap_around_checkbox)
 
-        layout.addWidget(QLabel("Search Mode:"))
+        layout.addWidget(QLabel("โหมดการค้นหา:"))
         layout.addWidget(self.normal_radio)
         layout.addWidget(self.extended_radio)
         layout.addWidget(self.regex_radio)
@@ -264,18 +264,18 @@ class TextComparisonTab(QWidget):
         self.source_text_area.verticalScrollBar().valueChanged.connect(self.target_text_area.verticalScrollBar().setValue)
         self.target_text_area.verticalScrollBar().valueChanged.connect(self.source_text_area.verticalScrollBar().setValue)
 
-        self.open_source_button = QPushButton("Open Source File")
+        self.open_source_button = QPushButton("เปิดไฟล์ต้นฉบับ")
         self.open_source_button.clicked.connect(self.open_source_file)
-        self.open_target_button = QPushButton("Open Translate File")
+        self.open_target_button = QPushButton("เปิดไฟล์ที่ต้องการแปล")
         self.open_target_button.clicked.connect(self.open_target_file)
-        self.save_button = QPushButton("Save")
+        self.save_button = QPushButton("บันทึกไฟล์")
         self.save_button.clicked.connect(self.save_file)
-        self.compare_button = QPushButton("Check Translation Progress")
+        self.compare_button = QPushButton("ตรวจสอบสถานะการแปล")
         self.compare_button.clicked.connect(self.calculate_thai_percentage)
 
         layout = QVBoxLayout()
         font_layout = QHBoxLayout()
-        font_layout.addWidget(QLabel("Font Size:"))
+        font_layout.addWidget(QLabel("ขนาดตัวอักษร:"))
         font_layout.addWidget(self.font_size_combo)
         layout.addLayout(font_layout)
 
@@ -352,7 +352,7 @@ class TextComparisonTab(QWidget):
         self.target_text_area.setFont(font)
 
     def open_source_file(self):
-        file1_path, _ = QFileDialog.getOpenFileName(self, "Open Source File", "", 
+        file1_path, _ = QFileDialog.getOpenFileName(self, "เปิดไฟล์ต้นฉบับ", "", 
                                                    "Text Files (*.txt);;All Files (*)")
         if file1_path:
             with open(file1_path, "rb") as file1:
@@ -377,7 +377,7 @@ class TextComparisonTab(QWidget):
         TextComparisonApp.instance.tabs.setTabText(TextComparisonApp.instance.tabs.indexOf(self), tab_name)
 
     def open_target_file(self):
-        self.file2_path, _ = QFileDialog.getOpenFileName(self, "Open Translate File", "", 
+        self.file2_path, _ = QFileDialog.getOpenFileName(self, "เปิดไฟล์ที่ต้องการแปล", "", 
                                                        "Text Files (*.txt);;All Files (*)")
         if self.file2_path:
             with open(self.file2_path, "rb") as file2:
@@ -490,14 +490,14 @@ class TextComparisonApp(QMainWindow):
         self.setCentralWidget(self.tabs)
 
         menu_bar = self.menuBar()
-        file_menu = menu_bar.addMenu("File")
+        file_menu = menu_bar.addMenu("ไฟล์")
         
-        new_tab_action = QAction("New Tab", self)
+        new_tab_action = QAction("แท็บใหม่", self)
         new_tab_action.setShortcut("Ctrl+T")
         new_tab_action.triggered.connect(self.add_new_tab)
         file_menu.addAction(new_tab_action)
 
-        close_tab_action = QAction("Close Tab", self)
+        close_tab_action = QAction("ปิดแท็บ", self)
         close_tab_action.setShortcut("Ctrl+W")
         close_tab_action.triggered.connect(self.close_current_tab)
         file_menu.addAction(close_tab_action)
@@ -505,11 +505,11 @@ class TextComparisonApp(QMainWindow):
         toolbar = QToolBar("Toolbar")
         self.addToolBar(toolbar)
 
-        find_action = QAction(QIcon.fromTheme("edit-find"), "Find", self)
+        find_action = QAction(QIcon.fromTheme("edit-find"), "ค้นหา", self)
         find_action.triggered.connect(self.open_find_replace_dialog)
         toolbar.addAction(find_action)
 
-        replace_action = QAction(QIcon.fromTheme("edit-find-replace"), "Find", self)
+        replace_action = QAction(QIcon.fromTheme("edit-find-replace"), "ค้นหา", self)
         replace_action.triggered.connect(self.open_find_replace_dialog)
         toolbar.addAction(replace_action)
 
@@ -530,18 +530,18 @@ class TextComparisonApp(QMainWindow):
 
         self.add_new_tab()
 
-        save_project_action = QAction(QIcon.fromTheme("document-save"), "Save Project", self)
+        save_project_action = QAction(QIcon.fromTheme("document-save"), "บันทึกเป็นโปรเจกต์", self)
         save_project_action.triggered.connect(self.save_project)
         file_menu.addAction(save_project_action)
 
-        load_project_action = QAction(QIcon.fromTheme("document-open"), "Load Project", self)
+        load_project_action = QAction(QIcon.fromTheme("document-open"), "โหลดโปรเจกต์", self)
         load_project_action.triggered.connect(self.load_project)
         file_menu.addAction(load_project_action)
 
 
     def save_project(self):
         project_path, _ = QFileDialog.getSaveFileName(
-            self, "Save Project", "", "Project Files (*.project)"
+            self, "บันทึกเป็นโปรเจกต์", "", "Project Files (*.project)"
         )
         if project_path:
             project_data = {
@@ -552,7 +552,7 @@ class TextComparisonApp(QMainWindow):
 
     def load_project(self):
         project_path, _ = QFileDialog.getOpenFileName(
-            self, "Load Project", "", "Project Files (*.project)"
+            self, "โหลดโปรเจกต์", "", "Project Files (*.project)"
         )
         if project_path:
             with open(project_path, "r", encoding="utf-8") as f:
